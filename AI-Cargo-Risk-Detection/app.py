@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
+import plotly.express as px
 
 from data_preprocessing import preprocess_data
 
@@ -25,10 +26,10 @@ st.markdown("### AI-powered container risk analysis dashboard")
 st.divider()
 
 # -----------------------------
-# MODEL ACCURACY (FROM TRAINING)
+# MODEL ACCURACY (CHANGE IF NEEDED)
 # -----------------------------
 
-MODEL_ACCURACY = 0.87   # replace with your actual accuracy
+MODEL_ACCURACY = 0.87
 
 # -----------------------------
 # LOAD MODELS
@@ -62,7 +63,6 @@ uploaded_file = st.sidebar.file_uploader(
 )
 
 if uploaded_file is None:
-
     st.info("Upload a dataset from the sidebar to start risk detection.")
     st.stop()
 
@@ -77,7 +77,7 @@ st.subheader("📂 Uploaded Dataset")
 st.dataframe(df, use_container_width=True)
 
 # -----------------------------
-# PREPROCESS
+# PREPROCESS DATA
 # -----------------------------
 
 df = preprocess_data(df)
@@ -128,21 +128,70 @@ col5.metric("🚨 Anomalies", anomaly_count)
 col6.metric("🎯 Model Accuracy", f"{MODEL_ACCURACY*100:.2f}%")
 
 # -----------------------------
-# RISK CHART
+# RISK BAR CHART
 # -----------------------------
 
 st.subheader("📈 Risk Distribution")
 
-risk_counts = df["Predicted_Risk"].value_counts()
+risk_counts = df["Predicted_Risk"].value_counts().reset_index()
+risk_counts.columns = ["Risk_Level", "Count"]
 
-st.bar_chart(risk_counts)
+fig = px.bar(
+    risk_counts,
+    x="Risk_Level",
+    y="Count",
+    color="Risk_Level",
+    text="Count",
+    title="Container Risk Distribution",
+    color_discrete_map={
+        "Low": "#2ecc71",
+        "Medium": "#f1c40f",
+        "Critical": "#e74c3c"
+    }
+)
+
+fig.update_traces(textposition="outside")
+
+fig.update_layout(
+    template="plotly_dark",
+    height=450,
+    title_x=0.35,
+    showlegend=False
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# -----------------------------
+# RISK PERCENTAGE DONUT
+# -----------------------------
+
+st.subheader("📊 Risk Percentage")
+
+percent_df = risk_counts.copy()
+percent_df["Percent"] = (percent_df["Count"] / percent_df["Count"].sum()) * 100
+
+fig2 = px.pie(
+    percent_df,
+    names="Risk_Level",
+    values="Percent",
+    color="Risk_Level",
+    color_discrete_map={
+        "Low": "#2ecc71",
+        "Medium": "#f1c40f",
+        "Critical": "#e74c3c"
+    },
+    hole=0.5
+)
+
+fig2.update_layout(template="plotly_dark")
+
+st.plotly_chart(fig2, use_container_width=True)
 
 # -----------------------------
 # ALERTS
 # -----------------------------
 
 if anomaly_count > 0:
-
     st.warning(f"⚠ {anomaly_count} suspicious containers detected!")
 
 # -----------------------------
@@ -154,7 +203,7 @@ st.subheader("📋 Prediction Results")
 st.dataframe(df, use_container_width=True)
 
 # -----------------------------
-# DOWNLOAD
+# DOWNLOAD RESULTS
 # -----------------------------
 
 csv = df.to_csv(index=False).encode("utf-8")
