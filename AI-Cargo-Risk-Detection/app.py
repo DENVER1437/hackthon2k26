@@ -1,4 +1,4 @@
- import streamlit as st
+import streamlit as st
 import pandas as pd
 import joblib
 import os
@@ -117,3 +117,4 @@ if uploaded_file is not None:
         "risk_predictions.csv",
         "text/csv"
     )
+
