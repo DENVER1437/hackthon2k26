@@ -24,7 +24,7 @@ st.divider()
 
 
 # -----------------------------
-# MODEL ACCURACY (CHANGE IF NEEDED)
+# MODEL ACCURACY
 # -----------------------------
 
 MODEL_ACCURACY = 0.87
@@ -37,10 +37,10 @@ MODEL_ACCURACY = 0.87
 @st.cache_resource
 def load_models():
 
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    model_path = os.path.join(BASE_DIR, "risk_model.pkl")
-    anomaly_path = os.path.join(BASE_DIR, "anomaly_model.pkl")
+    model_path = os.path.join(base_dir, "risk_model.pkl")
+    anomaly_path = os.path.join(base_dir, "anomaly_model.pkl")
 
     if not os.path.exists(model_path):
         st.error("❌ risk_model.pkl not found.")
@@ -105,19 +105,19 @@ X = df[features]
 
 
 # -----------------------------
-# PREDICT USING PROBABILITIES
+# SAFE PREDICTION LOGIC
 # -----------------------------
 
 probs = model.predict_proba(X)
-classes = model.classes_
+classes = list(model.classes_)
 
 predictions = []
 
 for p in probs:
 
-    low_p = p[list(classes).index("Low")]
-    med_p = p[list(classes).index("Medium")]
-    crit_p = p[list(classes).index("Critical")]
+    low_p = p[classes.index("Low")] if "Low" in classes else 0
+    med_p = p[classes.index("Medium")] if "Medium" in classes else 0
+    crit_p = p[classes.index("Critical")] if "Critical" in classes else 0
 
     if crit_p > 0.55:
         predictions.append("Critical")
@@ -165,7 +165,7 @@ col6.metric("🎯 Model Accuracy", f"{MODEL_ACCURACY*100:.2f}%")
 
 
 # -----------------------------
-# RISK DISTRIBUTION BAR CHART
+# RISK DISTRIBUTION CHART
 # -----------------------------
 
 st.subheader("📈 Risk Distribution")
@@ -198,7 +198,7 @@ st.plotly_chart(fig, use_container_width=True)
 
 
 # -----------------------------
-# RISK PERCENTAGE DONUT
+# RISK DONUT CHART
 # -----------------------------
 
 st.subheader("📊 Risk Percentage")
@@ -225,7 +225,7 @@ st.plotly_chart(fig2, use_container_width=True)
 
 
 # -----------------------------
-# ALERTS
+# ALERT
 # -----------------------------
 
 if anomaly_count > 0:
