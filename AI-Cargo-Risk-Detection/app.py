@@ -5,21 +5,28 @@ import os
 
 from data_preprocessing import preprocess_data
 
-# ----------------------------
-# PAGE CONFIG
-# ----------------------------
+# -----------------------------
+# PAGE SETTINGS
+# -----------------------------
 
 st.set_page_config(
     page_title="SmartContainer AI",
+    page_icon="🚢",
     layout="wide"
 )
 
-st.title("🚢 SmartContainer AI Risk Detection System")
-st.write("Upload real-time container shipment data to detect risk levels.")
+# -----------------------------
+# TITLE
+# -----------------------------
 
-# ----------------------------
-# LOAD MODELS (FIXED PATH)
-# ----------------------------
+st.title("🚢 SmartContainer AI Risk Detection System")
+st.markdown("### AI-powered container risk analysis dashboard")
+
+st.divider()
+
+# -----------------------------
+# LOAD MODELS
+# -----------------------------
 
 @st.cache_resource
 def load_models():
@@ -29,14 +36,6 @@ def load_models():
     model_path = os.path.join(BASE_DIR, "risk_model.pkl")
     anomaly_path = os.path.join(BASE_DIR, "anomaly_model.pkl")
 
-    if not os.path.exists(model_path):
-        st.error("❌ risk_model.pkl not found in project folder.")
-        st.stop()
-
-    if not os.path.exists(anomaly_path):
-        st.error("❌ anomaly_model.pkl not found in project folder.")
-        st.stop()
-
     model = joblib.load(model_path)
     anomaly_model = joblib.load(anomaly_path)
 
@@ -45,76 +44,115 @@ def load_models():
 
 model, anomaly_model = load_models()
 
-# ----------------------------
+# -----------------------------
 # FILE UPLOAD
-# ----------------------------
+# -----------------------------
 
-uploaded_file = st.file_uploader(
+st.sidebar.header("📂 Upload Shipment Data")
+
+uploaded_file = st.sidebar.file_uploader(
     "Upload Real-Time CSV",
     type=["csv"]
 )
 
-if uploaded_file is not None:
+if uploaded_file is None:
 
-    df = pd.read_csv(uploaded_file)
+    st.info("Upload a dataset from the sidebar to start risk detection.")
+    st.stop()
 
-    st.subheader("📂 Uploaded Data")
-    st.dataframe(df)
+# -----------------------------
+# LOAD DATA
+# -----------------------------
 
-    # ----------------------------
-    # PREPROCESS DATA
-    # ----------------------------
+df = pd.read_csv(uploaded_file)
 
-    df = preprocess_data(df)
+st.subheader("📂 Uploaded Dataset")
 
-    features = [
-        'Declared_Value',
-        'Declared_Weight',
-        'Dwell_Time_Hours',
-        'Weight_Gap_Pct',
-        'Value_Density',
-        'High_Value_Flag',
-        'Long_Dwell_Flag'
-    ]
+st.dataframe(df, use_container_width=True)
 
-    X = df[features]
+# -----------------------------
+# PREPROCESS
+# -----------------------------
 
-    # ----------------------------
-    # RISK PREDICTION
-    # ----------------------------
+df = preprocess_data(df)
 
-    df["Predicted_Risk"] = model.predict(X)
+features = [
+    'Declared_Value',
+    'Declared_Weight',
+    'Dwell_Time_Hours',
+    'Weight_Gap_Pct',
+    'Value_Density',
+    'High_Value_Flag',
+    'Long_Dwell_Flag'
+]
 
-    anomaly = anomaly_model.predict(X)
+X = df[features]
 
-    df["Anomaly_Flag"] = anomaly
+# -----------------------------
+# PREDICTIONS
+# -----------------------------
 
-    df.loc[df["Anomaly_Flag"] == -1, "Anomaly_Flag"] = "Yes"
-    df.loc[df["Anomaly_Flag"] == 1, "Anomaly_Flag"] = "No"
+df["Predicted_Risk"] = model.predict(X)
 
-    st.subheader("⚠️ Risk Prediction Results")
-    st.dataframe(df)
+anomaly = anomaly_model.predict(X)
 
-    # ----------------------------
-    # RISK DISTRIBUTION
-    # ----------------------------
+df["Anomaly_Flag"] = anomaly
+df.loc[df["Anomaly_Flag"] == -1, "Anomaly_Flag"] = "Yes"
+df.loc[df["Anomaly_Flag"] == 1, "Anomaly_Flag"] = "No"
 
-    st.subheader("📊 Risk Distribution")
+# -----------------------------
+# DASHBOARD METRICS
+# -----------------------------
 
-    risk_counts = df["Predicted_Risk"].value_counts()
+low = (df["Predicted_Risk"] == "Low").sum()
+medium = (df["Predicted_Risk"] == "Medium").sum()
+critical = (df["Predicted_Risk"] == "Critical").sum()
+anomaly_count = (df["Anomaly_Flag"] == "Yes").sum()
 
-    st.bar_chart(risk_counts)
+st.subheader("📊 Risk Overview")
 
-    # ----------------------------
-    # DOWNLOAD RESULTS
-    # ----------------------------
+col1, col2, col3, col4 = st.columns(4)
 
-    csv = df.to_csv(index=False).encode('utf-8')
+col1.metric("🟢 Low Risk", low)
+col2.metric("🟡 Medium Risk", medium)
+col3.metric("🔴 Critical Risk", critical)
+col4.metric("🚨 Anomalies Detected", anomaly_count)
 
-    st.download_button(
-        "⬇ Download Results",
-        csv,
-        "risk_predictions.csv",
-        "text/csv"
-    )
+# -----------------------------
+# RISK CHART
+# -----------------------------
 
+st.subheader("📈 Risk Distribution")
+
+risk_counts = df["Predicted_Risk"].value_counts()
+
+st.bar_chart(risk_counts)
+
+# -----------------------------
+# ANOMALY ALERTS
+# -----------------------------
+
+if anomaly_count > 0:
+
+    st.warning(f"⚠ {anomaly_count} suspicious containers detected!")
+
+# -----------------------------
+# RESULTS TABLE
+# -----------------------------
+
+st.subheader("📋 Prediction Results")
+
+st.dataframe(df, use_container_width=True)
+
+# -----------------------------
+# DOWNLOAD BUTTON
+# -----------------------------
+
+csv = df.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    "⬇ Download Predictions",
+    csv,
+    "risk_predictions.csv",
+    "text/csv"
+)
