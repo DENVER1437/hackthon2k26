@@ -1,8 +1,13 @@
-import streamlit as st
+ import streamlit as st
 import pandas as pd
 import joblib
+import os
 
 from data_preprocessing import preprocess_data
+
+# ----------------------------
+# PAGE CONFIG
+# ----------------------------
 
 st.set_page_config(
     page_title="SmartContainer AI",
@@ -10,25 +15,30 @@ st.set_page_config(
 )
 
 st.title("🚢 SmartContainer AI Risk Detection System")
-
 st.write("Upload real-time container shipment data to detect risk levels.")
 
 # ----------------------------
-# LOAD MODELS
+# LOAD MODELS (FIXED PATH)
 # ----------------------------
 
 @st.cache_resource
 def load_models():
 
-    import os
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(BASE_DIR, "risk_model.pkl")
+    anomaly_path = os.path.join(BASE_DIR, "anomaly_model.pkl")
 
-model_path = os.path.join(BASE_DIR, "risk_model.pkl")
-anomaly_path = os.path.join(BASE_DIR, "anomaly_model.pkl")
+    if not os.path.exists(model_path):
+        st.error("❌ risk_model.pkl not found in project folder.")
+        st.stop()
 
-model = joblib.load(model_path)
-anomaly_model = joblib.load(anomaly_path)
+    if not os.path.exists(anomaly_path):
+        st.error("❌ anomaly_model.pkl not found in project folder.")
+        st.stop()
+
+    model = joblib.load(model_path)
+    anomaly_model = joblib.load(anomaly_path)
 
     return model, anomaly_model
 
@@ -48,12 +58,11 @@ if uploaded_file is not None:
 
     df = pd.read_csv(uploaded_file)
 
-    st.subheader("Uploaded Data")
-
+    st.subheader("📂 Uploaded Data")
     st.dataframe(df)
 
     # ----------------------------
-    # PREPROCESS
+    # PREPROCESS DATA
     # ----------------------------
 
     df = preprocess_data(df)
@@ -71,7 +80,7 @@ if uploaded_file is not None:
     X = df[features]
 
     # ----------------------------
-    # PREDICT
+    # RISK PREDICTION
     # ----------------------------
 
     df["Predicted_Risk"] = model.predict(X)
@@ -83,15 +92,14 @@ if uploaded_file is not None:
     df.loc[df["Anomaly_Flag"] == -1, "Anomaly_Flag"] = "Yes"
     df.loc[df["Anomaly_Flag"] == 1, "Anomaly_Flag"] = "No"
 
-    st.subheader("Prediction Results")
-
+    st.subheader("⚠️ Risk Prediction Results")
     st.dataframe(df)
 
     # ----------------------------
     # RISK DISTRIBUTION
     # ----------------------------
 
-    st.subheader("Risk Distribution")
+    st.subheader("📊 Risk Distribution")
 
     risk_counts = df["Predicted_Risk"].value_counts()
 
@@ -104,9 +112,8 @@ if uploaded_file is not None:
     csv = df.to_csv(index=False).encode('utf-8')
 
     st.download_button(
-        "Download Results",
+        "⬇ Download Results",
         csv,
         "risk_predictions.csv",
         "text/csv"
-
     )
