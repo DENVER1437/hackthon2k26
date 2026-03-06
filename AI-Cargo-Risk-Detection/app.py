@@ -20,8 +20,15 @@ st.write("Upload real-time container shipment data to detect risk levels.")
 @st.cache_resource
 def load_models():
 
-    model = joblib.load("risk_model.pkl")
-    anomaly_model = joblib.load("anomaly_model.pkl")
+    import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+model_path = os.path.join(BASE_DIR, "risk_model.pkl")
+anomaly_path = os.path.join(BASE_DIR, "anomaly_model.pkl")
+
+model = joblib.load(model_path)
+anomaly_model = joblib.load(anomaly_path)
 
     return model, anomaly_model
 
@@ -101,4 +108,5 @@ if uploaded_file is not None:
         csv,
         "risk_predictions.csv",
         "text/csv"
+
     )
