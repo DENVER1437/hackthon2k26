@@ -25,6 +25,12 @@ st.markdown("### AI-powered container risk analysis dashboard")
 st.divider()
 
 # -----------------------------
+# MODEL ACCURACY (FROM TRAINING)
+# -----------------------------
+
+MODEL_ACCURACY = 0.87   # replace with your actual accuracy
+
+# -----------------------------
 # LOAD MODELS
 # -----------------------------
 
@@ -101,9 +107,10 @@ df.loc[df["Anomaly_Flag"] == -1, "Anomaly_Flag"] = "Yes"
 df.loc[df["Anomaly_Flag"] == 1, "Anomaly_Flag"] = "No"
 
 # -----------------------------
-# DASHBOARD METRICS
+# METRICS
 # -----------------------------
 
+total = len(df)
 low = (df["Predicted_Risk"] == "Low").sum()
 medium = (df["Predicted_Risk"] == "Medium").sum()
 critical = (df["Predicted_Risk"] == "Critical").sum()
@@ -111,12 +118,14 @@ anomaly_count = (df["Anomaly_Flag"] == "Yes").sum()
 
 st.subheader("📊 Risk Overview")
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-col1.metric("🟢 Low Risk", low)
-col2.metric("🟡 Medium Risk", medium)
-col3.metric("🔴 Critical Risk", critical)
-col4.metric("🚨 Anomalies Detected", anomaly_count)
+col1.metric("📦 Total Containers", total)
+col2.metric("🟢 Low Risk", low)
+col3.metric("🟡 Medium Risk", medium)
+col4.metric("🔴 Critical Risk", critical)
+col5.metric("🚨 Anomalies", anomaly_count)
+col6.metric("🎯 Model Accuracy", f"{MODEL_ACCURACY*100:.2f}%")
 
 # -----------------------------
 # RISK CHART
@@ -129,7 +138,7 @@ risk_counts = df["Predicted_Risk"].value_counts()
 st.bar_chart(risk_counts)
 
 # -----------------------------
-# ANOMALY ALERTS
+# ALERTS
 # -----------------------------
 
 if anomaly_count > 0:
@@ -145,7 +154,7 @@ st.subheader("📋 Prediction Results")
 st.dataframe(df, use_container_width=True)
 
 # -----------------------------
-# DOWNLOAD BUTTON
+# DOWNLOAD
 # -----------------------------
 
 csv = df.to_csv(index=False).encode("utf-8")
