@@ -43,11 +43,11 @@ def load_models():
     anomaly_path = os.path.join(BASE_DIR, "anomaly_model.pkl")
 
     if not os.path.exists(model_path):
-        st.error("❌ risk_model.pkl not found in repository.")
+        st.error("❌ risk_model.pkl not found.")
         st.stop()
 
     if not os.path.exists(anomaly_path):
-        st.error("❌ anomaly_model.pkl not found in repository.")
+        st.error("❌ anomaly_model.pkl not found.")
         st.stop()
 
     model = joblib.load(model_path)
@@ -82,7 +82,6 @@ if uploaded_file is None:
 df = pd.read_csv(uploaded_file)
 
 st.subheader("📂 Uploaded Dataset")
-
 st.dataframe(df, use_container_width=True)
 
 
@@ -106,10 +105,35 @@ X = df[features]
 
 
 # -----------------------------
-# PREDICTIONS
+# PREDICT USING PROBABILITIES
 # -----------------------------
 
-df["Predicted_Risk"] = model.predict(X)
+probs = model.predict_proba(X)
+classes = model.classes_
+
+predictions = []
+
+for p in probs:
+
+    low_p = p[list(classes).index("Low")]
+    med_p = p[list(classes).index("Medium")]
+    crit_p = p[list(classes).index("Critical")]
+
+    if crit_p > 0.55:
+        predictions.append("Critical")
+
+    elif med_p > 0.35:
+        predictions.append("Medium")
+
+    else:
+        predictions.append("Low")
+
+df["Predicted_Risk"] = predictions
+
+
+# -----------------------------
+# ANOMALY DETECTION
+# -----------------------------
 
 anomaly = anomaly_model.predict(X)
 
